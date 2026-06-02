@@ -1,0 +1,57 @@
+name: Build and Push
+
+on:
+  push:
+    branches:
+      - main
+      - "**-ci"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::116981795030:role/github-actions/hush-k8s-am-demo-app
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR Public
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: Build image
+        run: make build
+
+      - name: Push image
+        if: github.event_name == 'push'
+        run: make submit
+
+      - name: Push main tag
+        if: github.ref == 'refs/heads/main'
+        env:
+          REGISTRY: public.ecr.aws/z0t8l6o4
+          DOCKER_NAME: hush-k8s-am-demo-app-client
+        run: |
+          docker tag $DOCKER_NAME:latest $REGISTRY/$DOCKER_NAME:main
+          docker push $REGISTRY/$DOCKER_NAME:main
+
+      - name: Login to GHCR
+        if: github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u $ --password-stdin
+
+      - name: Push Helm chart to GHCR
+        if: github.ref == 'refs/heads/main'
+        run: make publish

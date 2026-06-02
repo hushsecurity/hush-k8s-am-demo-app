@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "hush-am-demo-app.fullname" . }}-postgres-root-secret
+  namespace: {{ .Values.hush.namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+type: Opaque
+stringData:
+  password: {{ .Values.postgres.rootPassword | quote }}
+---
+apiVersion: am.hush.security/v1alpha1
+kind: AccessCredential
+metadata:
+  name: {{ .Values.hush.postgresCredential.name }}
+  namespace: {{ .Values.hush.namespace }}
+spec:
+  name: {{ .Values.hush.postgresCredential.name }}
+  type: postgres
+  description: Root credential used by Hush to broker Postgres access
+  config:
+    db_name: {{ .Values.postgres.dbName | quote }}
+    host: {{ default (printf "%s-postgres.%s.svc.cluster.local" (include "hush-am-demo-app.fullname" .) .Release.Namespace) .Values.hush.postgresCredential.host | quote }}
+    port: {{ .Values.postgres.port }}
+    ssl_mode: {{ .Values.hush.postgresCredential.sslMode | quote }}
+    username: {{ .Values.postgres.rootUsername | quote }}
+  secretRef:
+    name: {{ include "hush-am-demo-app.fullname" . }}-postgres-root-secret
+---
+apiVersion: am.hush.security/v1alpha1
+kind: AccessPrivilege
+metadata:
+  name: {{ .Values.hush.postgresCredential.privilegeName }}
+  namespace: {{ .Values.hush.namespace }}
+spec:
+  name: {{ .Values.hush.postgresCredential.privilegeName }}
+  type: postgres
+  description: Read-only privilege for setup validation queries
+  config:
+    grants:
+      - object_type: SCHEMA
+        privileges: [USAGE]
+        object_names: ["public"]
+      - object_type: TABLE
+        privileges: [SELECT]
+        object_names: ["public"]
+        all_in_schema: true
+---
+apiVersion: am.hush.security/v1alpha1
+kind: AccessPolicy
+metadata:
+  name: {{ .Values.hush.postgresCredential.policyName }}
+  namespace: {{ .Values.hush.namespace }}
+spec:
+  name: {{ .Values.hush.postgresCredential.policyName }}
+  description: Inject Postgres credentials into setup demo-app python client
+  enabled: true
+  accessCredentialRef:
+    name: {{ .Values.hush.postgresCredential.name }}
+  accessPrivilegeRefs:
+    - name: {{ .Values.hush.postgresCredential.privilegeName }}
+  attestationCriteria:
+    - type: "k8s:ns"
+      value: {{ .Release.Namespace }}
+    - type: "k8s:sa"
+      value: {{ include "hush-am-demo-app.serviceAccountName" . }}
+    - type: "k8s:container-name"
+      value: python-client
+  deliveryConfig:
+    type: env
+    config:
+      items:
+        - name: POSTGRES_USERNAME
+          key: username
+          type: key
+        - name: POSTGRES_PASSWORD
+          key: password
+          type: key

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hush-am-demo-app
+description: Helm chart that validates Postgres + Hush credential injection setup
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
