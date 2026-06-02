@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ default (include "hush-am-demo-app.fullname" .) .Values.pod.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "hush-am-demo-app.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "hush-am-demo-app.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: client
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "hush-am-demo-app.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: client
+    spec:
+      serviceAccountName: {{ include "hush-am-demo-app.serviceAccountName" . }}
+      restartPolicy: Always
+      containers:
+        - name: python-client
+          image: {{ printf "%s:%s" .Values.pythonClient.image.repository .Values.pythonClient.image.tag }}
+          imagePullPolicy: {{ .Values.pythonClient.image.pullPolicy }}
+          command: ["python"]
+          args: ["postgres_client.py"]
+          env:
+            - name: POSTGRES_HOST
+              value: {{ printf "%s-postgres.%s.svc.cluster.local" (include "hush-am-demo-app.fullname" .) .Release.Namespace | quote }}
+            - name: POSTGRES_PORT
+              value: {{ .Values.postgres.port | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.dbName | quote }}
+            - name: POLL_INTERVAL_SECONDS
+              value: {{ .Values.pythonClient.pollIntervalSeconds | quote }}

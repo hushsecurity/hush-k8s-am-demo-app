@@ -1,0 +1,40 @@
+nameOverride: ""
+fullnameOverride: "hush-am-demo-app"
+
+serviceAccount:
+  create: true
+  name: ""
+
+pod:
+  name: ""
+
+postgres:
+  image: postgres:16
+  dbName: goatdb
+  rootUsername: postgres
+  rootPassword: "postgres-demo-root-password"
+  port: 5432
+
+pythonClient:
+  image:
+    repository: public.ecr.aws/z0t8l6o4/hush-k8s-am-demo-app
+    tag: main
+    pullPolicy: Always
+  pollIntervalSeconds: 15
+
+hush:
+  namespace: hush-security
+
+  postgresCredential:
+    name: postgres
+    privilegeName: postgres-read
+    policyName: postgres-policy
+    # Host as seen by Hush UAM API (service DNS)
+    host: ""
+    sslMode: disable
+
+  staticSecret:
+    secretName: static-secret
+    credentialName: static
+    policyName: static-policy
+    value: "demo-static-secret"
