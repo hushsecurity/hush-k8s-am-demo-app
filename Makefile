@@ -29,6 +29,6 @@ submit: login
 .PHONY: publish
 publish:
 	@mkdir build
-	@helm package helm/hush-k8s-goat-app -d build/
-	@helm push build/hush-k8s-goat-app-*.tgz $(HELM_REPO)
+	@helm package charts/hush-am-demo-app -d build/
+	@helm push build/hush-am-demo-app-*.tgz $(HELM_REPO)
 
