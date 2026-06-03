@@ -15,6 +15,40 @@ rules:
     verbs: ["get", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hush-am-demo-app.fullname" . }}-restart-policy-reader
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-5"
+rules:
+  - apiGroups: ["am.hush.security"]
+    resources: ["accesspolicies"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "hush-am-demo-app.fullname" . }}-restart-policy-reader
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-5"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "hush-am-demo-app.fullname" . }}-restart-policy-reader
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "hush-am-demo-app.fullname" . }}-restart
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "hush-am-demo-app.fullname" . }}-restart
@@ -70,7 +104,15 @@ spec:
             - sh
             - -c
             - |
-              echo "Waiting for Hush AM to reconcile policies..."
-              sleep 10
+              echo "Waiting for Hush AM to reconcile dynamic policy..."
+              for i in $(seq 1 60); do
+                STATUS=$(kubectl get accesspolicy {{ .Values.hush.postgresCredential.policyName }} -n {{ .Values.hush.namespace }} -o jsonpath='{.status.uamStatus}' 2>/dev/null)
+                if [ "$STATUS" = "ok" ]; then
+                  echo "Dynamic policy synced after ${i}s"
+                  break
+                fi
+                echo "  Policy status: ${STATUS:-pending} (${i}/60)"
+                sleep 1
+              done
               echo "Restarting client deployment to trigger admission webhook..."
               kubectl rollout restart deployment/{{ default (include "hush-am-demo-app.fullname" .) .Values.pod.name }} -n {{ .Release.Namespace }}
