@@ -1,0 +1,76 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "hush-am-demo-app.fullname" . }}-restart
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-5"
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "hush-am-demo-app.fullname" . }}-restart
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-5"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "hush-am-demo-app.fullname" . }}-restart
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "hush-am-demo-app.fullname" . }}-restart
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "hush-am-demo-app.fullname" . }}-restart
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-5"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "hush-am-demo-app.fullname" . }}-restart
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "5"
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: {{ include "hush-am-demo-app.fullname" . }}-restart
+      restartPolicy: Never
+      containers:
+        - name: restart
+          image: bitnami/kubectl:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Hush AM to reconcile policies..."
+              sleep 10
+              echo "Restarting client deployment to trigger admission webhook..."
+              kubectl rollout restart deployment/{{ default (include "hush-am-demo-app.fullname" .) .Values.pod.name }} -n {{ .Release.Namespace }}
