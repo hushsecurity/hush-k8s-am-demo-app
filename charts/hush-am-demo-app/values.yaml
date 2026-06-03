@@ -26,15 +26,15 @@ hush:
   namespace: hush-security
 
   postgresCredential:
-    name: postgres
-    privilegeName: postgres-read
-    policyName: postgres-policy
+    name: hush-am-demo-app-postgres
+    privilegeName: hush-am-demo-app-postgres-read
+    policyName: hush-am-demo-app-dynamic-policy
     # Host as seen by Hush UAM API (service DNS)
     host: ""
     sslMode: disable
 
   staticSecret:
-    secretName: static-secret
-    credentialName: static
-    policyName: static-policy
+    secretName: hush-am-demo-app-static-secret
+    credentialName: hush-am-demo-app-static
+    policyName: hush-am-demo-app-static-policy
     value: "demo-static-secret"
