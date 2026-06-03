@@ -28,7 +28,8 @@ pods, deployments, service account, configmaps, and Hush resources.
 ## Install
 
 ```bash
-helm install demo-app oci://ghcr.io/hushsecurity/hush-am-demo-app
+helm install demo-app oci://ghcr.io/hushsecurity/hush-am-demo-app \
+  --namespace goat-apps --create-namespace
 ```
 
 ## Validate
@@ -45,7 +46,7 @@ Expected behavior:
 ## Uninstall
 
 ```bash
-helm uninstall demo-app
+helm uninstall demo-app -n goat-apps
 ```
 
 This removes all chart-managed resources and leaves no chart-created workload objects behind.
