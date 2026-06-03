@@ -43,7 +43,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         env:
           REGISTRY: public.ecr.aws/z0t8l6o4
-          DOCKER_NAME: hush-k8s-am-demo-app-client
+          DOCKER_NAME: hush-k8s-am-demo-app
         run: |
           docker tag $DOCKER_NAME:latest $REGISTRY/$DOCKER_NAME:main
           docker push $REGISTRY/$DOCKER_NAME:main
