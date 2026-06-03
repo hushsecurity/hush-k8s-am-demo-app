@@ -28,7 +28,7 @@ pods, deployments, service account, configmaps, and Hush resources.
 ## Install
 
 ```bash
-helm install demo-app oci://ghcr.io/hushsecurity/hush-k8s-am-demo-app
+helm install demo-app oci://ghcr.io/hushsecurity/hush-am-demo-app
 ```
 
 ## Validate
